@@ -3189,7 +3189,7 @@ cmsBool ParseCube(cmsContext ContextID, cmsIT8* cube, cmsStage** Shaper, cmsStag
                 * Professional LUT generation tools (e.g., Nobe LutBake) list 65×65×65 as their highest supported size.                
                 */
                 if (lut_size > 65)
-                    return SynError(cube, "LUT size '%d' is over maximum of 65", lut_size);
+                    return SynError(ContextID, cube, "LUT size '%d' is over maximum of 65", lut_size);
 
                 nodes = lut_size * lut_size * lut_size;
 
@@ -3264,14 +3264,14 @@ cmsHPROFILE CMSEXPORT cmsCreateDeviceLinkFromCubeFile(cmsContext ContextID, cons
     // Populates the pipeline
     if (Shaper != NULL) {
         if (!cmsPipelineInsertStage(ContextID, Pipeline, cmsAT_BEGIN, Shaper)) {
-            cmsStageFree(Shaper);
+            cmsStageFree(ContextID, Shaper);
             goto Done;
         }
     }
 
     if (CLUT != NULL) {
         if (!cmsPipelineInsertStage(ContextID, Pipeline, cmsAT_END, CLUT)) {
-            cmsStageFree(CLUT);
+            cmsStageFree(ContextID, CLUT);
             goto Done;
         }
     }

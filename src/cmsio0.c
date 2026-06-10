@@ -1657,7 +1657,7 @@ void* CMSEXPORT cmsReadTag(cmsContext ContextID, cmsHPROFILE hProfile, cmsTagSig
 
     if (!_cmsLockMutex(ContextID, Icc ->UsrMutex)) return NULL;
 
-    avoidCheck = _cmsAvoidTypeCheckOnTags(Icc->ContextID);
+    avoidCheck = _cmsAvoidTypeCheckOnTags(ContextID);
 
     n = _cmsSearchTag(ContextID, Icc, sig, TRUE);
     if (n < 0)
@@ -1741,8 +1741,10 @@ void* CMSEXPORT cmsReadTag(cmsContext ContextID, cmsHPROFILE hProfile, cmsTagSig
     // Read the tag
     Icc->TagTypeHandlers[n] = TypeHandler;
 
-    LocalTypeHandler.ContextID = ContextID;
-    LocalTypeHandler.ICCVersion = Icc->Version;
+#if 0
+	LocalTypeHandler.ContextID = ContextID;
+#endif
+	LocalTypeHandler.ICCVersion = Icc->Version;
     Icc->TagPtrs[n] = LocalTypeHandler.ReadPtr(ContextID, &LocalTypeHandler, io, &ElemCount, TagSize);
 
     // The tag type is supported, but something wrong happened and we cannot read the tag.
