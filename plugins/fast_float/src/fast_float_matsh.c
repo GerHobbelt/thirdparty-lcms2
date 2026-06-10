@@ -285,7 +285,7 @@ cmsBool OptimizeFloatMatrixShaper(cmsContext ContextID,
 
             XYZmatrix = Matrix2 = cmsStageAllocMatrix(ContextID, 3, 3, mat, NULL);
         }
-        else 
+        else
             if (T_COLORSPACE(*InputFormat) == PT_XYZ) {
                 static const cmsFloat64Number mat[] = { 1.0/MAX_ENCODEABLE_XYZ,  0,   0,
                                                         0,  1.0/MAX_ENCODEABLE_XYZ,   0,
@@ -299,7 +299,7 @@ cmsBool OptimizeFloatMatrixShaper(cmsContext ContextID,
     }
     else
         if (!cmsPipelineCheckAndRetreiveStages(ContextID, Src, 4,
-            cmsSigCurveSetElemType, cmsSigMatrixElemType, cmsSigMatrixElemType, cmsSigCurveSetElemType, 
+            cmsSigCurveSetElemType, cmsSigMatrixElemType, cmsSigMatrixElemType, cmsSigCurveSetElemType,
             &Curve1, &Matrix1, &Matrix2, &Curve2)) return FALSE;
 
     nChans    = T_CHANNELS(*InputFormat);

@@ -19,6 +19,11 @@ function(_lcms2_add_tool exe_name)
     target_link_libraries(${exe_name} PRIVATE "${LCMS2_LIBRARY_TARGET}")
   endif()
 
+  # Per-target debug postfix for MSVC builds (avoids modifying CMAKE_DEBUG_POSTFIX globally).
+  if(MSVC)
+    set_target_properties(${exe_name} PROPERTIES DEBUG_POSTFIX "d")
+  endif()
+
   set(_lcms2_tool_targets "${LCMS2_TOOL_TARGETS}")
   list(APPEND _lcms2_tool_targets "${exe_name}")
   set(LCMS2_TOOL_TARGETS "${_lcms2_tool_targets}" PARENT_SCOPE)
@@ -133,6 +138,30 @@ function(lcms2_add_tools)
       endif()
     else()
       message(STATUS "TIFF not found or disabled; skipping tificc")
+    endif()
+  endif()
+
+  # Optional tifdiff (requires TIFF).
+  if(LCMS2_BUILD_TIFDIFF)
+    if(LCMS2_WITH_TIFF)
+      find_package(TIFF)
+    endif()
+
+    if(TIFF_FOUND)
+      _lcms2_add_tool(tifdiff
+        SOURCES
+          "${PROJECT_SOURCE_DIR}/utils/tificc/tifdiff.c"
+          ${_common_sources}
+      )
+      if(TARGET TIFF::TIFF)
+        target_link_libraries(tifdiff PRIVATE TIFF::TIFF)
+      else()
+        # Do not quote list variables: they may contain debug/optimized keywords.
+        target_include_directories(tifdiff PRIVATE ${TIFF_INCLUDE_DIR})
+        target_link_libraries(tifdiff PRIVATE ${TIFF_LIBRARIES})
+      endif()
+    else()
+      message(STATUS "TIFF not found or disabled; skipping tifdiff")
     endif()
   endif()
 

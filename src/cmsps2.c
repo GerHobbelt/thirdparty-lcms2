@@ -328,6 +328,32 @@ char* RemoveCR(const char* txt)
 
 }
 
+// Writes the body of a PostScript string literal, escaping the metacharacters
+// '\\', '(' and ')' and emitting non-printable / high-bit bytes as octal
+// triples per PLRM 3.3.4.1. The caller is responsible for the surrounding
+// '(' and ')' delimiters.
+static
+void EmitPSEscaped(cmsContext ContextID, cmsIOHANDLER* m, const char* txt)
+{
+    const unsigned char* p;
+
+    if (txt == NULL) return;
+
+    for (p = (const unsigned char*)txt; *p != 0; p++) {
+        unsigned char c = *p;
+
+        if (c == '\\' || c == '(' || c == ')') {
+            _cmsIOPrintf(ContextID, m, "\\%c", c);
+        }
+        else if (c < 0x20 || c >= 0x7F) {
+            _cmsIOPrintf(ContextID, m, "\\%03o", c);
+        }
+        else {
+            _cmsIOPrintf(ContextID, m, "%c", c);
+        }
+    }
+}
+
 static
 void EmitHeader(cmsContext ContextID, cmsIOHANDLER* m, const char* Title, cmsHPROFILE hProfile)
 {
@@ -666,7 +692,7 @@ void WriteCLUT(cmsContext ContextID, cmsIOHANDLER* m, cmsStage* mpe, const char*
 
         for (i = 0; i < sc.Pipeline->Params->nInputs; i++) {
             if (i < MAX_INPUT_DIMENSIONS)
-        _cmsIOPrintf(ContextID, m, " %d ", sc.Pipeline->Params->nSamples[i]);
+                _cmsIOPrintf(ContextID, m, " %d ", sc.Pipeline->Params->nSamples[i]);
         }
 
     _cmsIOPrintf(ContextID, m, " [\n");
@@ -914,7 +940,7 @@ cmsBool WriteInputLUT(cmsContext ContextID, cmsIOHANDLER* m, cmsHPROFILE hProfil
 
         cmsDeleteTransform(ContextID, xform);
         cmsSignalError(ContextID, cmsERROR_COLORSPACE_CHECK, "Only 3, 4 channels are supported for CSA. This profile has %d channels.", nChannels);
-        return FALSE;        
+        return FALSE;
     }
 
     cmsDeleteTransform(ContextID, xform);
@@ -1017,7 +1043,10 @@ int WriteNamedColorCSA(cmsContext ContextID, cmsIOHANDLER* m, cmsHPROFILE hNamed
                 continue;
 
         cmsDoTransform(ContextID, xform, In, &Lab, 1);
-        _cmsIOPrintf(ContextID, m, "  (%s) [ %.3f %.3f %.3f ]\n", ColorName, Lab.L, Lab.a, Lab.b);
+
+        _cmsIOPrintf(ContextID, m, "  (");
+        EmitPSEscaped(ContextID, m, ColorName);
+        _cmsIOPrintf(ContextID, m, ") [ %.3f %.3f %.3f ]\n", Lab.L, Lab.a, Lab.b);
     }
 
     _cmsIOPrintf(ContextID, m, ">>\n");
@@ -1452,7 +1481,10 @@ int WriteNamedColorCRD(cmsContext ContextID, cmsIOHANDLER* m, cmsHPROFILE hNamed
 
         cmsDoTransform(ContextID, xform, In, Out, 1);
         BuildColorantList(Colorant, nColorant, Out);
-        _cmsIOPrintf(ContextID, m, "  (%s) [ %s ]\n", ColorName, Colorant);
+
+        _cmsIOPrintf(ContextID, m, "  (");
+        EmitPSEscaped(ContextID, m, ColorName);
+        _cmsIOPrintf(ContextID, m, ") [ %s ]\n", Colorant);
     }
 
     _cmsIOPrintf(ContextID, m, "   >>");

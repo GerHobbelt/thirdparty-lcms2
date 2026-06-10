@@ -663,7 +663,6 @@ cmsBool OptimizeByResampling(cmsContext ContextID, cmsPipeline** Lut, cmsUInt32N
     // Color space must be specified
     if (ColorSpace == (cmsColorSpaceSignature)0 ||
         OutputColorSpace == (cmsColorSpaceSignature)0) return FALSE;
-       
     // For empty LUTs, 2 points are enough
     if (cmsPipelineStageCount(ContextID, *Lut) == 0)
         nGridPoints = 2;

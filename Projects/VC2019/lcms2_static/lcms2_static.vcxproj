@@ -28,7 +28,7 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{71DEDE59-3F1E-486B-A899-4283000F76B5}</ProjectGuid>
-    <RootNamespace>lcms2mt_static</RootNamespace>
+    <RootNamespace>lcms2_static</RootNamespace>
     <Keyword>Win32Proj</Keyword>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
@@ -278,8 +278,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\src\lcms2_internal.h" />
-    <ClInclude Include="..\..\..\include\lcms2mt.h" />
-    <ClInclude Include="..\..\..\include\lcms2mt_plugin.h" />
+    <ClInclude Include="..\..\..\include\lcms2.h" />
+    <ClInclude Include="..\..\..\include\lcms2_plugin.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

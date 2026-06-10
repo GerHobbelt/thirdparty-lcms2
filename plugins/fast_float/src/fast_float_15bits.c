@@ -65,7 +65,6 @@ cmsUInt8Number* Unroll15bitsGray(cmsContext ContextID,
        UNUSED_PARAMETER(ContextID);
        UNUSED_PARAMETER(CMMcargo);
        UNUSED_PARAMETER(Stride);
-       UNUSED_PARAMETER(ContextID);
 
        Values[0] = From15To16(*(cmsUInt16Number*)Buffer);
 

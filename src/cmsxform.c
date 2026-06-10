@@ -400,8 +400,8 @@ void NullXFORM(cmsContext ContextID,
 
         for (j = 0; j < PixelsPerLine; j++) {
 
-                  accum = p->FromInput(ContextID, p, wIn, accum, Stride->BytesPerPlaneIn);
-                  output = p->ToOutput(ContextID, p, wIn, output, Stride->BytesPerPlaneOut);
+            accum = p->FromInput(ContextID, p, wIn, accum, Stride->BytesPerPlaneIn);
+            output = p->ToOutput(ContextID, p, wIn, output, Stride->BytesPerPlaneOut);
         }
 
         strideIn += Stride->BytesPerLineIn;
@@ -2375,7 +2375,6 @@ void _cmsTransform2toTransformAdaptor(cmsContext ContextID, struct _cmstransform
                                       cmsUInt32Number LineCount,
                                       const cmsStride* Stride)
 {
-
        size_t i, strideIn, strideOut;
 
        _cmsHandleExtraChannels(ContextID, CMMcargo, InputBuffer, OutputBuffer, PixelsPerLine, LineCount, Stride);
@@ -3352,6 +3351,22 @@ cmsUInt32Number CMSEXPORT cmsGetTransformOutputFormat(cmsContext ContextID, cmsH
     return xform->OutputFormat;
 }
 
+// Returns the optimized pipeline (Lut) inside a transform. Read-only; do not free.
+cmsPipeline* CMSEXPORT cmsGetTransformPipeline(cmsHTRANSFORM hTransform)
+{
+    _cmsTRANSFORM* xform = (_cmsTRANSFORM*) hTransform;
+    if (xform == NULL) return NULL;
+    return xform->core->Lut;
+}
+
+// Returns the gamut-check pipeline inside a transform. Read-only; do not free.
+cmsPipeline* CMSEXPORT cmsGetTransformGamutCheckPipeline(cmsHTRANSFORM hTransform)
+{
+    _cmsTRANSFORM* xform = (_cmsTRANSFORM*) hTransform;
+    if (xform == NULL) return NULL;
+    return xform->core->GamutCheck;
+}
+
 cmsHTRANSFORM cmsCloneTransformChangingFormats(cmsContext ContextID,
                                                const cmsHTRANSFORM hTransform,
                                                cmsUInt32Number InputFormat,
@@ -3393,4 +3408,20 @@ cmsHTRANSFORM cmsCloneTransformChangingFormats(cmsContext ContextID,
     (void)_cmsAdjustReferenceCount(&xform->core->refs, 1);
 
     return xform;
+}
+
+cmsNAMEDCOLORLIST* CMSEXPORT cmsGetTransformInputColorants(cmsHTRANSFORM hTransform)
+{
+    _cmsTRANSFORM* xform = (_cmsTRANSFORM*)hTransform;
+
+    if (xform == NULL || xform->core == NULL) return NULL;
+    return xform->core->InputColorant;
+}
+
+cmsNAMEDCOLORLIST* CMSEXPORT cmsGetTransformOutputColorants(cmsHTRANSFORM hTransform)
+{
+    _cmsTRANSFORM* xform = (_cmsTRANSFORM*)hTransform;
+
+    if (xform == NULL || xform->core == NULL) return NULL;
+    return xform->core->OutputColorant;
 }

@@ -137,6 +137,7 @@ void FloatCLUTEval(cmsContext ContextID,
             y0 = (int) floorf(py); ry = (py - (cmsFloat32Number)y0);
             z0 = (int) floorf(pz); rz = (pz - (cmsFloat32Number)z0);
 
+
             X0 = p->opta[2] * x0;
             X1 = X0 + (r >= 1.0 ? 0 : p->opta[2]);
 
@@ -333,7 +334,7 @@ cmsBool OptimizeCLUTRGBTransform(cmsContext ContextID,
     data = (_cmsStageCLutData*) cmsStageData(ContextID, OptimizedCLUTmpe);
 
     pfloat = FloatCLUTAlloc(ContextID, data ->Params);
-    if (pfloat == NULL) return FALSE;
+    if (pfloat == NULL) goto Error;
 
     // And return the obtained LUT
     cmsPipelineFree(ContextID, OriginalLut);
@@ -341,12 +342,14 @@ cmsBool OptimizeCLUTRGBTransform(cmsContext ContextID,
     *Lut = OptimizedLUT;
     *TransformFn = FloatCLUTEval;
     *UserData   = pfloat;
-    *FreeDataFn = _cmsFree;
+    *FreeDataFn = _fast_float_free_user_data;
     *dwFlags &= ~cmsFLAGS_CAN_CHANGE_FORMATTER;
     return TRUE;
 
 Error:
 
+    // We return leaving *Lut pointing to OriginalLut. Caller is
+    // responsible for freeing it. Is this intended?
     if (OptimizedLUT != NULL) cmsPipelineFree(ContextID, OptimizedLUT);
 
     return FALSE;

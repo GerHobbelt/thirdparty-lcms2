@@ -309,10 +309,10 @@ cmsUInt32Number OpenEmbedded(cmsContext ContextID, TIFF* tiff, cmsHPROFILE* PtrP
               *PtrProfile = cmsOpenProfileFromMem(ContextID, EmbedBuffer, EmbedLen);
 
               if (Verbose) {
-
-				  fprintf(stdout, "Embedded profile found:\n");
-				  PrintProfileInformation(NULL, *PtrProfile);
-
+                  
+                  fprintf(stdout, "Embedded profile found:\n");                          
+                  PrintProfileInformation(ContextID, *PtrProfile);
+                  
               }
 
               dwFormat  = GetInputPixelType(tiff);
@@ -338,7 +338,7 @@ int CmpImages(cmsContext ContextID, TIFF* tiff1, TIFF* tiff2, TIFF* diff)
     cmsUInt8Number* buf1, *buf2, *buf3=NULL;
     int row, cols, imagewidth = 0, imagelength = 0;
     uint16_t   Photometric;
-    double dE = 0;
+    double dE = 0;    
     double dR, dG, dB, dC, dM, dY, dK;
     int rc = 0;
     cmsHPROFILE hProfile1 = 0, hProfile2 = 0;

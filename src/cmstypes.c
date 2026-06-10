@@ -1178,6 +1178,7 @@ void *Type_Text_Description_Read(cmsContext ContextID, struct _cms_typehandler_s
 
     if (!_cmsReadWCharArray(ContextID, io, UnicodeCount, UnicodeString)) {
         _cmsFree(ContextID, (void*)UnicodeString);
+        UnicodeString = NULL;
         goto Done;
     }
 
@@ -1185,6 +1186,7 @@ void *Type_Text_Description_Read(cmsContext ContextID, struct _cms_typehandler_s
 
     if (!cmsMLUsetWide(ContextID, mlu, cmsV2Unicode, cmsV2Unicode, UnicodeString)) {
         _cmsFree(ContextID, (void*)UnicodeString);
+        UnicodeString = NULL;
         goto Done;
     }
 
@@ -4924,6 +4926,7 @@ cmsBool Type_MPE_Write(cmsContext ContextID, struct _cms_typehandler_struct* sel
 
         if (!_cmsWriteUInt32Number(ContextID, io, ElementSig)) goto Error;
         if (!_cmsWriteUInt32Number(ContextID, io, 0)) goto Error;
+ 
         if (!TypeHandler ->WritePtr(ContextID, self, io, Elem, 1)) goto Error;
         if (!_cmsWriteAlignment(ContextID, io)) goto Error;
 
@@ -5239,6 +5242,7 @@ cmsBool AllocElem(cmsContext ContextID, _cmsDICelem* e,  cmsUInt32Number Count)
     if (e->Sizes == NULL) {
 
         _cmsFree(ContextID, e -> Offsets);
+        e->Offsets = NULL;
         return FALSE;
     }
 
@@ -5402,6 +5406,7 @@ cmsBool ReadOneWChar(cmsContext ContextID, cmsIOHANDLER* io,  _cmsDICelem* e, cm
 
       if (!_cmsReadWCharArray(ContextID, io, nChars, *wcstr)) {
           _cmsFree(ContextID, *wcstr);
+          *wcstr = NULL;
           return FALSE;
       }
 
@@ -5554,10 +5559,22 @@ void *Type_Dictionary_Read(cmsContext ContextID, struct _cms_typehandler_struct*
             rc = cmsDictAddEntry(ContextID, hDict, NameWCS, ValueWCS, DisplayNameMLU, DisplayValueMLU);
         }
 
-        if (NameWCS != NULL) _cmsFree(ContextID, NameWCS);
-        if (ValueWCS != NULL) _cmsFree(ContextID, ValueWCS);
-        if (DisplayNameMLU != NULL) cmsMLUfree(ContextID, DisplayNameMLU);
-        if (DisplayValueMLU != NULL) cmsMLUfree(ContextID, DisplayValueMLU);
+        if (NameWCS != NULL) {
+            _cmsFree(ContextID, NameWCS);
+            NameWCS = NULL;
+        }
+        if (ValueWCS != NULL) {
+            _cmsFree(ContextID, ValueWCS);
+            ValueWCS = NULL;
+        }
+        if (DisplayNameMLU != NULL) {
+            cmsMLUfree(ContextID, DisplayNameMLU);
+            DisplayNameMLU = NULL;
+        }
+        if (DisplayValueMLU != NULL) {
+            cmsMLUfree(ContextID, DisplayValueMLU);
+            DisplayValueMLU = NULL;
+        }
 
         if (!rc) goto Error;
     }
@@ -5569,6 +5586,10 @@ void *Type_Dictionary_Read(cmsContext ContextID, struct _cms_typehandler_struct*
 Error:
    FreeArray(ContextID, &a);
    if (hDict != NULL) cmsDictFree(ContextID, hDict);
+   if (NameWCS != NULL) _cmsFree(ContextID, NameWCS);
+   if (ValueWCS != NULL) _cmsFree(ContextID, ValueWCS);
+   if (DisplayNameMLU != NULL) cmsMLUfree(ContextID, DisplayNameMLU);
+   if (DisplayValueMLU != NULL) cmsMLUfree(ContextID, DisplayValueMLU);
    return NULL;
 }
 
@@ -5810,7 +5831,7 @@ cmsBool Type_MHC2_Write(cmsContext ContextID, struct _cms_typehandler_struct* se
     cmsUInt32Number TablesOffsetPos;
     cmsUInt32Number MatrixOffset;
     cmsUInt32Number OffsetRedTable, OffsetGreenTable, OffsetBlueTable;
-
+    
     if (!_cmsWriteUInt32Number(ContextID, io, mhc2->CurveEntries)) return FALSE;
 
     if (!_cmsWrite15Fixed16Number(ContextID, io, mhc2->MinLuminance)) return FALSE;

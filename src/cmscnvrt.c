@@ -632,18 +632,21 @@ cmsPipeline* DefaultICCintents(cmsContext       ContextID,
     // Check for non-negatives clip
     if (dwFlags & cmsFLAGS_NONEGATIVES) {
 
-           if (ColorSpaceOut == cmsSigGrayData ||
-                  ColorSpaceOut == cmsSigRgbData ||
-                  ColorSpaceOut == cmsSigCmykData) {
+        if (ColorSpaceOut == cmsSigGrayData ||
+            ColorSpaceOut == cmsSigRgbData ||
+            ColorSpaceOut == cmsSigCmykData) {
 
-                  cmsStage* clip = _cmsStageClipNegatives(ContextID, cmsChannelsOfColorSpace(ContextID, ColorSpaceOut));
-                  if (clip == NULL) goto Error;
+            cmsStage* clip = _cmsStageClipNegatives(ContextID, cmsChannelsOfColorSpace(ContextID, ColorSpaceOut));
+            if (clip == NULL) goto Error;
 
-                  if (!cmsPipelineInsertStage(ContextID, Result, cmsAT_END, clip))
-                         goto Error;
-           }
+            if (!cmsPipelineInsertStage(ContextID, Result, cmsAT_END, clip))
+                goto Error;
+        }
 
     }
+
+    if (cmsChannelsOfColorSpace(ContextID, ColorSpaceOut) != (cmsInt32Number) cmsPipelineOutputChannels(ContextID, Result))
+        goto Error;
 
     return Result;
 
@@ -1007,10 +1010,6 @@ cmsPipeline* BlackPreservingKPlaneIntents(cmsContext     ContextID,
         cmsGetDeviceClass(ContextID, hLastProfile) == cmsSigOutputClass))
            return  DefaultICCintents(ContextID, nProfiles, ICCIntents, hProfiles, BPC, AdaptationStates, dwFlags);
 
-    // Allocate an empty LUT for holding the result
-    Result = cmsPipelineAlloc(ContextID, 4, 4);
-    if (Result == NULL) return NULL;
-
     memset(&bp, 0, sizeof(bp));
 
     // We need the input LUT of the last profile, assuming this one is responsible of
@@ -1069,20 +1068,32 @@ cmsPipeline* BlackPreservingKPlaneIntents(cmsContext     ContextID,
     CLUT = cmsStageAllocCLut16bit(ContextID, nGridPoints, 4, 4, NULL);
     if (CLUT == NULL) goto Cleanup;
 
-    if (!cmsPipelineInsertStage(ContextID, Result, cmsAT_BEGIN, CLUT))
+    // Allocate an empty LUT for holding the result
+    Result = cmsPipelineAlloc(ContextID, 4, 4);
+    if (Result == NULL) goto Cleanup;
+
+    if (!cmsPipelineInsertStage(ContextID, Result, cmsAT_BEGIN, CLUT)) {
+        cmsPipelineFree(ContextID, Result);
+        Result = NULL;
         goto Cleanup;
+    }
 
     cmsStageSampleCLut16bit(ContextID, CLUT, BlackPreservingSampler, (void*) &bp, 0);
 
     // Insert possible devicelinks at the end
     for (i = lastProfilePos + 1; i < nProfiles; i++)
-    {
+    {        
         cmsPipeline* devlink = _cmsReadDevicelinkLUT(ContextID, hProfiles[i], ICCIntents[i]);
-        if (devlink == NULL)
+        if (devlink == NULL) {
+            cmsPipelineFree(ContextID, Result);
+            Result = NULL;
             goto Cleanup;
+        }
 
-        if (!cmsPipelineCat(ContextID, Result, devlink))
-            goto Cleanup;
+        if (!cmsPipelineCat(ContextID, Result, devlink)) {
+            cmsPipelineFree(ContextID, Result);
+            Result = NULL;            
+        }
     }
 
 

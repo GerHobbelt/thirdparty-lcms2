@@ -64,11 +64,16 @@ function(_lcms2_apply_common_settings tgt)
     target_compile_options(${tgt} PRIVATE "-fvisibility=hidden")
   endif()
 
+  # Per-target debug postfix for MSVC builds (avoids modifying CMAKE_DEBUG_POSTFIX globally).
+  if(MSVC)
+    set_target_properties(${tgt} PROPERTIES DEBUG_POSTFIX "d")
+  endif()
+
   # libm (primarily needed on Linux). Make it PUBLIC so dependents (tools)
   # also link it, matching autotools *_DEPLIBS behavior.
-  find_library(_lcms2_math_lib m)
-  if(_lcms2_math_lib)
-    target_link_libraries(${tgt} PUBLIC "${_lcms2_math_lib}")
+  # Reuse the library path already detected by lcms2_detect_features().
+  if(LCMS2_MATH_LIB)
+    target_link_libraries(${tgt} PUBLIC "${LCMS2_MATH_LIB}")
   endif()
 endfunction()
 

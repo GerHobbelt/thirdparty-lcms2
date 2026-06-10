@@ -1184,6 +1184,7 @@ EVAL_FNS(13, 12)
 EVAL_FNS(14, 13)
 EVAL_FNS(15, 14)
 
+
 // The default factory
 static
 cmsInterpFunction DefaultInterpolatorsFactory(cmsUInt32Number nInputChannels, cmsUInt32Number nOutputChannels, cmsUInt32Number dwFlags)

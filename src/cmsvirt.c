@@ -1281,12 +1281,23 @@ cmsHPROFILE CMSEXPORT cmsTransform2DeviceLink(cmsContext ContextID, cmsHTRANSFOR
     if (!cmsWriteTag(ContextID, hProfile, DestinationTag, LUT)) goto Error;
 
 
-    if (xform->core->InputColorant != NULL) {
+    // Colorant tables have special rules depening on deviceClass
+    if (xform->core->InputColorant != NULL && 
+       (deviceClass == cmsSigLinkClass || deviceClass == cmsSigInputClass)) {
+
            if (!cmsWriteTag(ContextID, hProfile, cmsSigColorantTableTag, xform->core->InputColorant)) goto Error;
     }
 
     if (xform->core->OutputColorant != NULL) {
-           if (!cmsWriteTag(ContextID, hProfile, cmsSigColorantTableOutTag, xform->core->OutputColorant)) goto Error;
+
+        if (deviceClass == cmsSigLinkClass) {
+
+            if (!cmsWriteTag(ContextID, hProfile, cmsSigColorantTableOutTag, xform->core->OutputColorant)) goto Error;
+        }
+        else
+        {
+            if (!cmsWriteTag(ContextID, hProfile, cmsSigColorantTableTag, xform->core->OutputColorant)) goto Error;
+        }
     }
 
     if ((deviceClass == cmsSigLinkClass) && (xform ->core->Sequence != NULL)) {

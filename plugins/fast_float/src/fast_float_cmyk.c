@@ -368,7 +368,7 @@ cmsBool OptimizeCLUTCMYKTransform(cmsContext ContextID,
     data = (_cmsStageCLutData*) cmsStageData(ContextID, OptimizedCLUTmpe);
 
     pcmyk = FloatCMYKAlloc(ContextID, data ->Params);
-    if (pcmyk == NULL) return FALSE;
+    if (pcmyk == NULL) goto Error;
 
     // And return the obtained LUT
     cmsPipelineFree(ContextID, OriginalLut);
@@ -376,12 +376,14 @@ cmsBool OptimizeCLUTCMYKTransform(cmsContext ContextID,
     *Lut = OptimizedLUT;
     *TransformFn = FloatCMYKCLUTEval;
     *UserData   = pcmyk;
-    *FreeDataFn = _cmsFree;
+    *FreeDataFn = _fast_float_free_user_data;
     *dwFlags &= ~cmsFLAGS_CAN_CHANGE_FORMATTER;
     return TRUE;
 
 Error:
 
+    // We return leaving *Lut pointing to OriginalLut. Caller is
+    // responsible for freeing it. Is this intended?
     if (OptimizedLUT != NULL) cmsPipelineFree(ContextID, OptimizedLUT);
 
     return FALSE;

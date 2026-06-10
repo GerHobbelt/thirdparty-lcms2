@@ -247,8 +247,8 @@ int count_stats(cmsContext ContextID, const char* Profile)
     case cmsSigLinkClass         : link++;  break;
     case cmsSigAbstractClass     : abst++; break;
     case cmsSigColorSpaceClass   : color++; break;
-    case cmsSigNamedColorClass   : named ++; break;
-    }
+    case cmsSigNamedColorClass   : named++; break;
+	}
 
 
     switch (cmsGetColorSpace(ContextID, h)) {

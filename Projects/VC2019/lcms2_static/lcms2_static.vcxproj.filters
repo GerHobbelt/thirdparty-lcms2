@@ -95,10 +95,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\..\..\include\lcms2mt.h">
+    <ClInclude Include="..\..\..\include\lcms2.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\include\lcms2mt_plugin.h">
+    <ClInclude Include="..\..\..\include\lcms2_plugin.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\src\lcms2_internal.h">

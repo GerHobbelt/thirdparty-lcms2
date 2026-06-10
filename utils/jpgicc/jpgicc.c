@@ -1055,9 +1055,11 @@ int TransformImage(cmsContext ContextID, const char *cDefInpProf, const char *cO
 static
 void Help(cmsContext ContextID, int level)
 {
-
     UTILS_UNUSED_PARAMETER(level);
 
+    fprintf(stderr, "Little CMS ICC profile applier for JPEG - v3.5 [LittleCMS %2.2f]\n\n", cmsGetEncodedCMMversion() / 1000.0);
+    fprintf(stderr, "Copyright (c) 1998-2026 Marti Maria Saguer. See COPYING file for details.\n");
+    
     fprintf(stderr, "usage: jpgicc [flags] input.jpg output.jpg\n");
 
     fprintf(stderr, "\nflags:\n\n");
@@ -1260,10 +1262,6 @@ int main(int argc, const char** argv)
 {
     cmsContext ContextID = cmsCreateContext(NULL, NULL);
 
-    fprintf(stderr, "Little CMS ICC profile applier for JPEG - v3.4 [LittleCMS %2.2f]\n\n", cmsGetEncodedCMMversion() / 1000.0);
-    fprintf(stderr, "Copyright (c) 1998-2026 Marti Maria Saguer. See COPYING file for details.\n");
-    fflush(stderr);
-
     InitUtils(ContextID, "jpgicc");
 
     HandleSwitches(ContextID, argc, argv);
@@ -1276,7 +1274,6 @@ int main(int argc, const char** argv)
     OpenOutput(argv[xoptind+1]);
 
     TransformImage(ContextID, cInpProf, cOutProf);
-
 
     if (Verbose) { fprintf(stdout, "\n"); fflush(stdout); }
 

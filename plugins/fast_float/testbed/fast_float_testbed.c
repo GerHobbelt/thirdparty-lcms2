@@ -1280,7 +1280,7 @@ void CheckConversionFloat(cmsContext Raw, cmsContext Plugin)
     CheckFloatToFloatXYZ();
     trace("Ok\n");
 
-    // Matrix-shaper should be accurate 
+    // Matrix-shaper should be accurate
     trace("Checking accuracy on Matrix-shaper...");
     TryAllValuesFloat(Raw, Plugin, cmsOpenProfileFromFile(Raw, PROFILES_DIR "test5.icc", "r"), cmsOpenProfileFromFile(Raw, PROFILES_DIR "test0.icc", "r"), INTENT_PERCEPTUAL);
     trace("Ok\n");

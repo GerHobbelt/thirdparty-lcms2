@@ -1054,7 +1054,6 @@ void InSymbol(cmsContext ContextID, cmsIT8* it8)
                 InStringSymbol(ContextID, it8);
                 if (!Check(ContextID, it8, SSTRING, "Filename expected"))
                     return;
-                
 
                 FileNest = it8 -> FileStack[it8 -> IncludeSP + 1];
                 if(FileNest == NULL) {
@@ -1093,9 +1092,9 @@ void InSymbol(cmsContext ContextID, cmsIT8* it8)
 static
 cmsBool CheckEOLN(cmsContext ContextID, cmsIT8* it8)
 {
-        if (!Check(ContextID, it8, SEOLN, "Expected separator")) return FALSE;
+    if (!Check(ContextID, it8, SEOLN, "Expected separator")) return FALSE;
     while (it8->sy == SEOLN)
-                        InSymbol(ContextID, it8);
+        InSymbol(ContextID, it8);
     return TRUE;
 
 }
@@ -1106,7 +1105,7 @@ static
 void Skip(cmsContext ContextID, cmsIT8* it8, SYMBOL sy)
 {
     if (it8->sy == sy && it8->sy != SEOF && it8->sy != SSYNERROR)
-                        InSymbol(ContextID, it8);
+        InSymbol(ContextID, it8);
 }
 
 
@@ -1115,7 +1114,7 @@ static
 void SkipEOLN(cmsContext ContextID, cmsIT8* it8)
 {
     while (it8->sy == SEOLN) {
-             InSymbol(ContextID, it8);
+        InSymbol(ContextID, it8);
     }
 }
 
@@ -1243,19 +1242,26 @@ void* AllocChunk(cmsContext ContextID, cmsIT8* it8, cmsUInt32Number size)
 
         it8 ->Allocator.Used = 0;
         new_block = (cmsUInt8Number*)AllocBigBlock(ContextID, it8, it8->Allocator.BlockSize);
-        if (new_block == NULL) 
-            return NULL;
+        if (new_block == NULL) goto Error;
 
         it8->Allocator.Block = new_block;
     }
 
     if (it8->Allocator.Block == NULL)
-        return NULL;
+        goto Error;
 
     ptr = it8 ->Allocator.Block + it8 ->Allocator.Used;
     it8 ->Allocator.Used += size;
 
     return (void*) ptr;
+
+Error:
+
+    SynError(ContextID, it8, "Allocation error");
+    it8->Allocator.BlockSize = 0;
+    it8->Allocator.Used = 0;
+    it8->Allocator.Block = NULL;
+    return NULL;
 }
 
 
@@ -1410,7 +1416,7 @@ cmsBool AllocTable(cmsContext ContextID, cmsIT8* it8)
     TABLE* t;
     cmsUNUSED_PARAMETER(ContextID);
 
-    if (it8->TablesCount >= (MAXTABLES-1)) 
+    if (it8->TablesCount >= (MAXTABLES-1))
         return FALSE;
 
     t = it8 ->Tab + it8 ->TablesCount;
@@ -1676,8 +1682,8 @@ cmsBool SetDataFormat(cmsContext ContextID, cmsIT8* it8, int n, const char *labe
             return FALSE;
     }
 
-    if (n >= t -> nSamples) {
-        SynError(ContextID, it8, "More than NUMBER_OF_FIELDS fields.");
+    if (n < 0 || n >= t -> nSamples) {
+        SynError(ContextID, it8, "Invalid or more than NUMBER_OF_FIELDS fields.");
         return FALSE;
     }
 
@@ -1693,6 +1699,8 @@ cmsBool SetDataFormat(cmsContext ContextID, cmsIT8* it8, int n, const char *labe
 cmsBool CMSEXPORT cmsIT8SetDataFormat(cmsContext ContextID, cmsHANDLE  h, int n, const char *Sample)
 {
     cmsIT8* it8 = (cmsIT8*)h;
+
+    _cmsAssert(n >= 0);
     return SetDataFormat(ContextID, it8, n, Sample);
 }
 
@@ -1725,7 +1733,7 @@ cmsBool AllocateDataSet(cmsContext ContextID, cmsIT8* it8)
     t-> nSamples   = satoi(cmsIT8GetProperty(ContextID, it8, "NUMBER_OF_FIELDS"));
     t-> nPatches   = satoi(cmsIT8GetProperty(ContextID, it8, "NUMBER_OF_SETS"));
 
-    if (t -> nSamples < 0 || t->nSamples > 0x7ffe || t->nPatches < 0 || t->nPatches > 0x7ffe || 
+    if (t -> nSamples < 0 || t->nSamples > 0x7ffe || t->nPatches < 0 || t->nPatches > 0x7ffe ||
         (t->nPatches * t->nSamples) > 200000)
     {
         SynError(ContextID, it8, "AllocateDataSet: too much data");
@@ -1764,7 +1772,7 @@ cmsBool SetData(cmsContext ContextID, cmsIT8* it8, int nSet, int nField, const c
     char* ptr;
 
     TABLE* t = GetTable(ContextID, it8);
-    
+
 
     if (!t->Data) {
         if (!AllocateDataSet(ContextID, it8)) return FALSE;
@@ -2020,7 +2028,7 @@ cmsBool CMSEXPORT cmsIT8SaveToFile(cmsContext ContextID, cmsHANDLE hIT8, const c
         TABLE* t;
 
         if (cmsIT8SetTable(ContextID, hIT8, i) < 0) goto Error;
-        
+
         /**
         * Check for wrong data
         */
@@ -3118,9 +3126,11 @@ cmsBool ParseCube(cmsContext ContextID, cmsIT8* cube, cmsStage** Shaper, cmsStag
             InSymbol(ContextID, cube);
             if (!Check(ContextID, cube, SINUM, "Shaper size expected")) return FALSE;
             shaper_size = cube->inum;
+            if (shaper_size < 2 || shaper_size > 65536)
+                 return SynError(ContextID, cube, "LUT_1D_SIZE '%d' is out of bounds", shaper_size);
             InSymbol(ContextID, cube);
             break;
-        
+
         // Deefine CLUT
         case S_LUT3D_SIZE:
             InSymbol(ContextID, cube);
@@ -3186,10 +3196,10 @@ cmsBool ParseCube(cmsContext ContextID, cmsIT8* cube, cmsStage** Shaper, cmsStag
                 int nodes;
                 
                 /**
-                * Professional LUT generation tools (e.g., Nobe LutBake) list 65×65×65 as their highest supported size.                
+                * Professional LUT generation tools (e.g., Nobe LutBake) list 65×65×65 as their highest supported size.
                 */
-                if (lut_size > 65)
-                    return SynError(ContextID, cube, "LUT size '%d' is over maximum of 65", lut_size);
+                if (lut_size < 2 || lut_size > 65)
+                    return SynError(ContextID, cube, "LUT size '%d' is not allowed", lut_size);
 
                 nodes = lut_size * lut_size * lut_size;
 
@@ -3210,7 +3220,7 @@ cmsBool ParseCube(cmsContext ContextID, cmsIT8* cube, cmsStage** Shaper, cmsStag
 
                 *CLUT = cmsStageAllocCLutFloat(ContextID, lut_size, 3, 3, lut_table);
                 _cmsFree(ContextID, lut_table);
-            }   
+            }
 
             if (!Check(ContextID, cube, SEOF, "Extra symbols found in file")) return FALSE;
         }
@@ -3221,18 +3231,18 @@ cmsBool ParseCube(cmsContext ContextID, cmsIT8* cube, cmsStage** Shaper, cmsStag
 
 // Share the parser to read .cube format and create RGB devicelink profiles
 cmsHPROFILE CMSEXPORT cmsCreateDeviceLinkFromCubeFile(cmsContext ContextID, const char* cFileName)
-{    
+{
     cmsHPROFILE hProfile = NULL;
     cmsIT8* cube = NULL;
-    cmsPipeline* Pipeline = NULL;   
+    cmsPipeline* Pipeline = NULL;
     cmsStage* CLUT = NULL;
     cmsStage* Shaper = NULL;
     cmsMLU* DescriptionMLU = NULL;
     char title[MAXSTR];
 
     _cmsAssert(cFileName != NULL);
-    
-    cube = (cmsIT8*) cmsIT8Alloc(ContextID);    
+
+    cube = (cmsIT8*) cmsIT8Alloc(ContextID);
     if (!cube) return NULL;
 
     cube->IsCUBE = TRUE;
@@ -3244,11 +3254,11 @@ cmsHPROFILE CMSEXPORT cmsCreateDeviceLinkFromCubeFile(cmsContext ContextID, cons
     cube->FileStack[0]->FileName[cmsMAX_PATH - 1] = 0;
 
     if (!ParseCube(ContextID, cube, &Shaper, &CLUT, title)) goto Done;
-        
+
     // Success on parsing, let's create the profile
     hProfile = cmsCreateProfilePlaceholder(ContextID);
     if (!hProfile) goto Done;
-        
+
     cmsSetProfileVersion(ContextID, hProfile, 4.4);
 
     cmsSetDeviceClass(ContextID, hProfile, cmsSigLinkClass);
