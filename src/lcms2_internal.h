@@ -923,6 +923,7 @@ int                  _cmsSearchTag(cmsContext ContextID, _cmsICCPROFILE* Icc, cm
 cmsTagTypeHandler*   _cmsGetTagTypeHandler(cmsContext ContextID, cmsTagTypeSignature sig);
 cmsTagTypeSignature  _cmsGetTagTrueType(cmsContext ContextID, cmsHPROFILE hProfile, cmsTagSignature sig);
 cmsTagDescriptor*    _cmsGetTagDescriptor(cmsContext ContextID, cmsTagSignature sig);
+cmsBool              _cmsAvoidTypeCheckOnTags(cmsContext ContextID);
 
 // Error logging ---------------------------------------------------------------------------------------------------------
 

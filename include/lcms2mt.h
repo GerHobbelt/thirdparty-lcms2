@@ -23,7 +23,7 @@
 //
 //---------------------------------------------------------------------------------
 //
-// Version 2.18
+// Version 2.19a1
 //
 
 #ifndef _lcms2mt_H
@@ -92,7 +92,7 @@ extern "C" {
 // use OUR numbers with a mainline LCMS to fail, so
 // we have to go under 2000-2100. Let's subtract
 // 2000 from the mainline release.
-#define LCMS_VERSION              (2180 - 2000)
+#define LCMS_VERSION              (2190 - 2000)
 
 // We expect any LCMS2MT release to fall within the
 // following range.
@@ -1508,6 +1508,7 @@ CMSAPI cmsHPROFILE       CMSEXPORT cmsCreateProfilePlaceholder(cmsContext Contex
 
 CMSAPI cmsInt32Number    CMSEXPORT cmsGetTagCount(cmsContext ContextID, cmsHPROFILE hProfile);
 CMSAPI cmsTagSignature   CMSEXPORT cmsGetTagSignature(cmsContext ContextID, cmsHPROFILE hProfile, cmsUInt32Number n);
+CMSAPI cmsBool           CMSEXPORT cmsGetTagOffsetAndSize(cmsContext ContextID, cmsHPROFILE hProfile, cmsUInt32Number n, cmsUInt32Number* offset, cmsUInt32Number* size);
 CMSAPI cmsBool           CMSEXPORT cmsIsTag(cmsContext ContextID, cmsHPROFILE hProfile, cmsTagSignature sig);
 
 // Read and write pre-formatted data

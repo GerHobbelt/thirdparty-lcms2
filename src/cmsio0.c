@@ -593,6 +593,18 @@ cmsTagSignature CMSEXPORT cmsGetTagSignature(cmsContext ContextID, cmsHPROFILE h
     return Icc ->TagNames[n];
 }
 
+// Return location of the tag
+cmsBool cmsGetTagOffsetAndSize(cmsHPROFILE hProfile, cmsUInt32Number n, cmsUInt32Number* offset, cmsUInt32Number* size)
+{
+    _cmsICCPROFILE* Icc = (_cmsICCPROFILE*)hProfile;
+
+    if (n > Icc->TagCount) return FALSE;
+    if (n >= MAX_TABLE_TAG) return FALSE;
+
+    if (offset != NULL) *offset = Icc->TagOffsets[n];
+    if (size != NULL) *size = Icc->TagSizes[n];
+    return TRUE;
+}
 
 static
 int SearchOneTag(_cmsICCPROFILE* Profile, cmsTagSignature sig)
@@ -1632,17 +1644,20 @@ cmsBool IsTypeSupported(cmsTagDescriptor* TagDescriptor, cmsTagTypeSignature Typ
 // That's the main read function
 void* CMSEXPORT cmsReadTag(cmsContext ContextID, cmsHPROFILE hProfile, cmsTagSignature sig)
 {
-    _cmsICCPROFILE* Icc = (_cmsICCPROFILE*) hProfile;
+    _cmsICCPROFILE* Icc = (_cmsICCPROFILE*)hProfile;
+    cmsBool avoidCheck;
     cmsIOHANDLER* io;
     cmsTagTypeHandler* TypeHandler;
     cmsTagTypeHandler LocalTypeHandler;
-    cmsTagDescriptor*  TagDescriptor;
+    cmsTagDescriptor* TagDescriptor = NULL;
     cmsTagTypeSignature BaseType;
     cmsUInt32Number Offset, TagSize;
     cmsUInt32Number ElemCount;
     int n;
 
     if (!_cmsLockMutex(ContextID, Icc ->UsrMutex)) return NULL;
+
+    avoidCheck = _cmsAvoidTypeCheckOnTags(Icc->ContextID);
 
     n = _cmsSearchTag(ContextID, Icc, sig, TRUE);
     if (n < 0)
@@ -1653,7 +1668,7 @@ void* CMSEXPORT cmsReadTag(cmsContext ContextID, cmsHPROFILE hProfile, cmsTagSig
     }
 
     // If the element is already in memory, return the pointer
-    if (Icc -> TagPtrs[n]) {
+    if (Icc->TagPtrs[n]) {
 
         if (Icc->TagTypeHandlers[n] == NULL) goto Error;
 
@@ -1661,24 +1676,26 @@ void* CMSEXPORT cmsReadTag(cmsContext ContextID, cmsHPROFILE hProfile, cmsTagSig
         BaseType = Icc->TagTypeHandlers[n]->Signature;
         if (BaseType == 0) goto Error;
 
-        TagDescriptor = _cmsGetTagDescriptor(ContextID, sig);
-        if (TagDescriptor == NULL) goto Error;
+        if (!avoidCheck) {
 
-        if (!IsTypeSupported(TagDescriptor, BaseType)) goto Error;
+            TagDescriptor = _cmsGetTagDescriptor(ContextID, sig);
+            if (TagDescriptor == NULL) goto Error;
+            if (!IsTypeSupported(TagDescriptor, BaseType)) goto Error;
+        }
 
-        if (Icc ->TagSaveAsRaw[n]) goto Error;  // We don't support read raw tags as cooked
+        if (Icc->TagSaveAsRaw[n]) goto Error;  // We don't support read raw tags as cooked
 
-        _cmsUnlockMutex(ContextID, Icc ->UsrMutex);
-        return Icc -> TagPtrs[n];
+        _cmsUnlockMutex(ContextID, Icc->UsrMutex);
+        return Icc->TagPtrs[n];
     }
 
     // We need to read it. Get the offset and size to the file
-    Offset    = Icc -> TagOffsets[n];
-    TagSize   = Icc -> TagSizes[n];
+    Offset = Icc->TagOffsets[n];
+    TagSize = Icc->TagSizes[n];
 
     if (TagSize < 8) goto Error;
 
-    io = Icc ->IOhandler;
+    io = Icc->IOhandler;
 
     if (io == NULL) { // This is a built-in profile that has been manipulated, abort early
 
@@ -1687,29 +1704,33 @@ void* CMSEXPORT cmsReadTag(cmsContext ContextID, cmsHPROFILE hProfile, cmsTagSig
     }
 
     // Seek to its location
-    if (!io -> Seek(ContextID, io, Offset))
+    if (!io->Seek(ContextID, io, Offset))
         goto Error;
 
-    // Search for support on this tag
-    TagDescriptor = _cmsGetTagDescriptor( ContextID, sig);
-    if (TagDescriptor == NULL) {
+    if (!avoidCheck) {
+        // Search for support on this tag
+        TagDescriptor = _cmsGetTagDescriptor(ContextID, sig);
+        if (TagDescriptor == NULL) {
 
-        char String[5];
+            char String[5];
 
-        _cmsTagSignature2String(String, sig);
+            _cmsTagSignature2String(String, sig);
 
-        // An unknown element was found.
-        cmsSignalError(ContextID, cmsERROR_UNKNOWN_EXTENSION, "Unknown tag type '%s' found.", String);
-        goto Error;     // Unsupported.
+            // An unknown element was found.
+            cmsSignalError(ContextID, cmsERROR_UNKNOWN_EXTENSION, "Unknown tag type '%s' found.", String);
+            goto Error;     // Unsupported.
+        }
     }
 
     // if supported, get type and check if in list
     BaseType = _cmsReadTypeBase(ContextID, io);
     if (BaseType == 0) goto Error;
 
-    if (!IsTypeSupported(TagDescriptor, BaseType)) goto Error;
+    if (!avoidCheck) {
+        if (!IsTypeSupported(TagDescriptor, BaseType)) goto Error;
+    }
 
-    TagSize  -= 8;       // Already read by the type base logic
+    TagSize -= 8;       // Already read by the type base logic
 
     // Get type handler
     TypeHandler = _cmsGetTagTypeHandler(ContextID, BaseType);
@@ -1718,14 +1739,15 @@ void* CMSEXPORT cmsReadTag(cmsContext ContextID, cmsHPROFILE hProfile, cmsTagSig
 
 
     // Read the tag
-    Icc -> TagTypeHandlers[n] = TypeHandler;
+    Icc->TagTypeHandlers[n] = TypeHandler;
 
-    LocalTypeHandler.ICCVersion = Icc ->Version;
-    Icc -> TagPtrs[n] = LocalTypeHandler.ReadPtr(ContextID, &LocalTypeHandler, io, &ElemCount, TagSize);
+    LocalTypeHandler.ContextID = ContextID;
+    LocalTypeHandler.ICCVersion = Icc->Version;
+    Icc->TagPtrs[n] = LocalTypeHandler.ReadPtr(ContextID, &LocalTypeHandler, io, &ElemCount, TagSize);
 
     // The tag type is supported, but something wrong happened and we cannot read the tag.
     // let know the user about this (although it is just a warning)
-    if (Icc -> TagPtrs[n] == NULL) {
+    if (Icc->TagPtrs[n] == NULL) {
 
         char String[5];
 
@@ -1734,30 +1756,32 @@ void* CMSEXPORT cmsReadTag(cmsContext ContextID, cmsHPROFILE hProfile, cmsTagSig
         goto Error;
     }
 
-    // This is a weird error that may be a symptom of something more serious, the number of
-    // stored item is actually less than the number of required elements.
-    if (ElemCount < TagDescriptor ->ElemCount) {
+    if (!avoidCheck) {
+        // This is a weird error that may be a symptom of something more serious, the number of
+        // stored item is actually less than the number of required elements.
+        if (ElemCount < TagDescriptor->ElemCount) {
 
-        char String[5];
+            char String[5];
 
-        _cmsTagSignature2String(String, sig);
-        cmsSignalError(ContextID, cmsERROR_CORRUPTION_DETECTED, "'%s' Inconsistent number of items: expected %d, got %d",
-            String, TagDescriptor ->ElemCount, ElemCount);
-        goto Error;
+            _cmsTagSignature2String(String, sig);
+            cmsSignalError(ContextID, cmsERROR_CORRUPTION_DETECTED, "'%s' Inconsistent number of items: expected %d, got %d",
+                String, TagDescriptor->ElemCount, ElemCount);
+            goto Error;
+        }
     }
 
-
     // Return the data
-    _cmsUnlockMutex(ContextID, Icc ->UsrMutex);
-    return Icc -> TagPtrs[n];
+    _cmsUnlockMutex(ContextID, Icc->UsrMutex);
+    return Icc->TagPtrs[n];
 
 
     // Return error and unlock the data
 Error:
 
     freeOneTag(ContextID, Icc, n);
-    
-    _cmsUnlockMutex(ContextID, Icc ->UsrMutex);
+    Icc->TagPtrs[n] = NULL;
+
+    _cmsUnlockMutex(ContextID, Icc->UsrMutex);
     return NULL;
 }
 
@@ -1775,6 +1799,8 @@ cmsTagTypeSignature _cmsGetTagTrueType(cmsContext ContextID, cmsHPROFILE hProfil
 
     // Get the handler. The true type is there
     TypeHandler =  Icc -> TagTypeHandlers[n];
+    if (TypeHandler == NULL) return (cmsTagTypeSignature) 0;
+
     return TypeHandler ->Signature;
 }
 
