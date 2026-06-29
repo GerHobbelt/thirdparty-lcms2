@@ -868,6 +868,7 @@ cmsBool _cmsReadHeader(cmsContext ContextID, _cmsICCPROFILE* Icc)
     cmsUInt32Number HeaderSize;
     cmsIOHANDLER* io = Icc ->IOhandler;
     cmsUInt32Number TagCount;
+    cmsBool corruptedTagPos = FALSE;
 
 
     // Read the header
@@ -910,8 +911,8 @@ cmsBool _cmsReadHeader(cmsContext ContextID, _cmsICCPROFILE* Icc)
     // Get size as reported in header
     HeaderSize = _cmsAdjustEndianess32(Header.size);
 
-    // Make sure HeaderSize is lower than profile size
-    if (HeaderSize >= Icc ->IOhandler ->ReportedSize)
+    // Make sure HeaderSize is at least same as reported size
+    if (HeaderSize >= Icc->IOhandler->ReportedSize)
             HeaderSize = Icc ->IOhandler ->ReportedSize;
 
     // Get creation date/time
@@ -940,8 +941,10 @@ cmsBool _cmsReadHeader(cmsContext ContextID, _cmsICCPROFILE* Icc)
         // Perform some sanity check. Offset + size should fall inside file.
         if (Tag.size == 0 || Tag.offset == 0) continue;
         if (Tag.offset + Tag.size > HeaderSize ||
-            Tag.offset + Tag.size < Tag.offset)
-                  continue;
+            Tag.offset + Tag.size < Tag.offset) {
+            corruptedTagPos = TRUE;
+            continue;
+        }
 
         Icc -> TagNames[Icc ->TagCount]   = Tag.sig;
         Icc -> TagOffsets[Icc ->TagCount] = Tag.offset;
@@ -977,6 +980,14 @@ cmsBool _cmsReadHeader(cmsContext ContextID, _cmsICCPROFILE* Icc)
             }
 
         }
+    }
+
+    // This is a small aid to diagnose malformed profiles. Please note that execution
+    // continues even if an error message is raised. This situation should NEVER occur
+    // with valid profiles and may indicate an attempted exploit.
+    if (corruptedTagPos) {
+        cmsSignalError(ContextID, cmsERROR_CORRUPTION_DETECTED, 
+            "'size' field in header seems incorrect.");
     }
 
     return TRUE;
@@ -2155,9 +2166,10 @@ cmsBool CMSEXPORT cmsWriteRawTag(cmsContext ContextID, cmsHPROFILE hProfile, cms
     }
 
     // Mark the tag as being written as RAW
-    Icc ->TagSaveAsRaw[i] = TRUE;
-    Icc ->TagNames[i]     = sig;
-    Icc ->TagLinked[i]    = (cmsTagSignature) 0;
+    Icc ->TagSaveAsRaw[i]    = TRUE;
+    Icc ->TagNames[i]        = sig;
+    Icc ->TagLinked[i]       = (cmsTagSignature) 0;
+    Icc ->TagTypeHandlers[i] = NULL;
 
     // Keep a copy of the block
     Icc ->TagPtrs[i]  = _cmsDupMem(ContextID, data, Size);
